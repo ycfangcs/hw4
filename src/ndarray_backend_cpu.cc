@@ -46,32 +46,48 @@ void Fill(AlignedArray* out, scalar_t val) {
 
 
 
-void Compact(const AlignedArray& a, AlignedArray* out, std::vector<int32_t> shape,
-             std::vector<int32_t> strides, size_t offset) {
+void Compact(const AlignedArray& a, AlignedArray* out, std::vector<uint32_t> shape,
+             std::vector<uint32_t> strides, size_t offset) {
   /**
    * Compact an array in memory
-   * 
+   *
    * Args:
-   *   a: non-compact represntation of the array, given as input
+   *   a: non-compact representation of the array, given as input
    *   out: compact version of the array to be written
    *   shape: shapes of each dimension for a and out
    *   strides: strides of the *a* array (not out, which has compact strides)
    *   offset: offset of the *a* array (not out, which has zero offset, being compact)
-   * 
+   *
    * Returns:
    *  void (you need to modify out directly, rather than returning anything; this is true for all the
    *  function will implement here, so we won't repeat this note.)
    */
   /// BEGIN YOUR SOLUTION
-  
+  size_t dim = shape.size();
+  std::vector<uint32_t> pos(dim, 0);
+  for (size_t i=0; i<out->size; i++) {
+    uint32_t idx = 0;
+    for (int j=0; j<dim; j++) 
+      idx += strides[dim-1-j] * pos[j];
+    out->ptr[i] = a.ptr[idx + offset];
+    pos[0] += 1;
+    // carry
+    for (int j=0; j<dim; j++) {
+      if (pos[j] == shape[dim-1-j]) {
+        pos[j] = 0;
+        if (j != dim-1)
+          pos[j+1] += 1;
+      }
+    }
+  }
   /// END YOUR SOLUTION
 }
 
-void EwiseSetitem(const AlignedArray& a, AlignedArray* out, std::vector<int32_t> shape,
-                  std::vector<int32_t> strides, size_t offset) {
+void EwiseSetitem(const AlignedArray& a, AlignedArray* out, std::vector<uint32_t> shape,
+                  std::vector<uint32_t> strides, size_t offset) {
   /**
    * Set items in a (non-compact) array
-   * 
+   *
    * Args:
    *   a: _compact_ array whose items will be written to out
    *   out: non-compact array whose items are to be written
@@ -80,19 +96,36 @@ void EwiseSetitem(const AlignedArray& a, AlignedArray* out, std::vector<int32_t>
    *   offset: offset of the *out* array (not a, which has zero offset, being compact)
    */
   /// BEGIN YOUR SOLUTION
-  
+  size_t dim = shape.size();
+  std::vector<uint32_t> pos(dim, 0);
+  // NOTE careful with the iteration times, not `out-size`!
+  for (size_t i=0; i<a.size; i++) {
+    uint32_t idx = 0;
+    for (int j=0; j<dim; j++) 
+      idx += strides[dim-1-j] * pos[j];
+    out->ptr[idx + offset] = a.ptr[i];
+    pos[0] += 1;
+    // carry
+    for (int j=0; j<dim; j++) {
+      if (pos[j] == shape[dim-1-j]) {
+        pos[j] = 0;
+        if (j != dim-1)
+          pos[j+1] += 1;
+      }
+    }
+  }  
   /// END YOUR SOLUTION
 }
 
-void ScalarSetitem(const size_t size, scalar_t val, AlignedArray* out, std::vector<int32_t> shape,
-                   std::vector<int32_t> strides, size_t offset) {
+void ScalarSetitem(const size_t size, scalar_t val, AlignedArray* out, std::vector<uint32_t> shape,
+                   std::vector<uint32_t> strides, size_t offset) {
   /**
    * Set items is a (non-compact) array
-   * 
+   *
    * Args:
    *   size: number of elements to write in out array (note that this will note be the same as
-   *         out.size, because out is a non-compact subset array);  it _will_ be the same as the 
-   *         product of items in shape, but covenient to just pass it here.
+   *         out->size, because out is a non-compact subset array);  it _will_ be the same as the
+   *         product of items in shape, but convenient to just pass it here.
    *   val: scalar value to write to
    *   out: non-compact array whose items are to be written
    *   shape: shapes of each dimension of out
@@ -101,7 +134,23 @@ void ScalarSetitem(const size_t size, scalar_t val, AlignedArray* out, std::vect
    */
 
   /// BEGIN YOUR SOLUTION
-  
+  size_t dim = shape.size();
+  std::vector<uint32_t> pos(dim, 0);
+  for (size_t i=0; i<size; i++) {
+    uint32_t idx = 0;
+    for (int j=0; j<dim; j++) 
+      idx += strides[dim-1-j] * pos[j];
+    out->ptr[idx + offset] = val;
+    pos[0] += 1;
+    // carry
+    for (int j=0; j<dim; j++) {
+      if (pos[j] == shape[dim-1-j]) {
+        pos[j] = 0;
+        if (j != dim-1)
+          pos[j+1] += 1;
+      }
+    }
+  }  
   /// END YOUR SOLUTION
 }
 
@@ -116,7 +165,7 @@ void EwiseAdd(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
 
 void ScalarAdd(const AlignedArray& a, scalar_t val, AlignedArray* out) {
   /**
-   * Set entries in out to be the sum of correspondings entry in a plus the scalar val.
+   * Set entries in out to be the sum of corresponding entry in a plus the scalar val.
    */
   for (size_t i = 0; i < a.size; i++) {
     out->ptr[i] = a.ptr[i] + val;
@@ -125,7 +174,7 @@ void ScalarAdd(const AlignedArray& a, scalar_t val, AlignedArray* out) {
 
 
 /**
- * In the code the follows, use the above template to create analogous elementise
+ * In the code the follows, use the above template to create analogous element-wise
  * and and scalar operators for the following functions.  See the numpy backend for
  * examples of how they should work.
  *   - EwiseMul, ScalarMul
@@ -145,42 +194,136 @@ void ScalarAdd(const AlignedArray& a, scalar_t val, AlignedArray* out) {
  */
 
 /// BEGIN YOUR SOLUTION
+// EwiseMul, ScalarMul
+void EwiseMul(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
+  for (size_t i = 0; i < a.size; i++) {
+    out->ptr[i] = a.ptr[i] * b.ptr[i];
+  }
+}
 
+void ScalarMul(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  for (size_t i = 0; i < a.size; i++) {
+    out->ptr[i] = a.ptr[i] * val;
+  }
+}
+
+// EwiseDiv, ScalarDiv
+void EwiseDiv(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
+  for (size_t i = 0; i < a.size; i++) {
+    out->ptr[i] = a.ptr[i] / b.ptr[i];
+  }
+}
+
+void ScalarDiv(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  for (size_t i = 0; i < a.size; i++) {
+    out->ptr[i] = a.ptr[i] / val;
+  }
+}
+
+//ScalarPower
+void ScalarPower(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  for (size_t i = 0; i < a.size; i++) {
+    out->ptr[i] = pow(a.ptr[i], val);
+  }
+}
+
+//EwiseMaximum, ScalarMaximum
+void EwiseMaximum(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
+  for (size_t i = 0; i < a.size; i++) {
+    out->ptr[i] = std::max(a.ptr[i], b.ptr[i]);
+  }
+}
+
+void ScalarMaximum(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  for (size_t i = 0; i < a.size; i++) {
+    out->ptr[i] = std::max(a.ptr[i], val);
+  }
+}
+
+// EwiseEq, ScalarEq
+void EwiseEq(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
+  for (size_t i = 0; i < a.size; i++) {
+    out->ptr[i] = scalar_t(a.ptr[i] == b.ptr[i]);
+  }
+}
+
+void ScalarEq(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  for (size_t i = 0; i < a.size; i++) {
+    out->ptr[i] = scalar_t(a.ptr[i] == val);
+  }
+}
+// EwiseGe, ScalarGe
+void EwiseGe(const AlignedArray& a, const AlignedArray& b, AlignedArray* out) {
+  for (size_t i = 0; i < a.size; i++) {
+    out->ptr[i] = scalar_t(a.ptr[i] >= b.ptr[i]);
+  }
+}
+
+void ScalarGe(const AlignedArray& a, scalar_t val, AlignedArray* out) {
+  for (size_t i = 0; i < a.size; i++) {
+    out->ptr[i] = scalar_t(a.ptr[i] >= val);
+  }
+}
+// EwiseLog
+void EwiseLog(const AlignedArray& a, AlignedArray* out) {
+  for (size_t i = 0; i < a.size; i++) {
+    out->ptr[i] = log(a.ptr[i]);
+  }
+}
+// EwiseExp
+void EwiseExp(const AlignedArray& a, AlignedArray* out) {
+  for (size_t i = 0; i < a.size; i++) {
+    out->ptr[i] = exp(a.ptr[i]);
+  }
+}
+// EwiseTanh
+void EwiseTanh(const AlignedArray& a, AlignedArray* out) {
+  for (size_t i = 0; i < a.size; i++) {
+    out->ptr[i] = tanh(a.ptr[i]);
+  }
+}
 /// END YOUR SOLUTION
 
 void Matmul(const AlignedArray& a, const AlignedArray& b, AlignedArray* out, uint32_t m, uint32_t n,
             uint32_t p) {
   /**
-   * Multiply two (compact) matrices into an output (also comapct) matrix.  For this implementation
+   * Multiply two (compact) matrices into an output (also compact) matrix.  For this implementation
    * you can use the "naive" three-loop algorithm.
    *
    * Args:
    *   a: compact 2D array of size m x n
-   *   b: comapct 2D array of size n x p
+   *   b: compact 2D array of size n x p
    *   out: compact 2D array of size m x p to write the output to
    *   m: rows of a / out
    *   n: columns of a / rows of b
-   *   p: coolumns of b / out
+   *   p: columns of b / out
    */
 
   /// BEGIN YOUR SOLUTION
-  
+  for (size_t i=0; i<m; i++) {
+    for (size_t j=0; j<p; j++) {
+      out->ptr[i * p + j] = 0;
+      for (size_t k=0; k<n; k++) {
+        out->ptr[i * p + j] += a.ptr[i * n + k] * b.ptr[k * p + j];
+      }
+    }
+  }
   /// END YOUR SOLUTION
 }
 
-inline void AlignedDot(const float* __restrict__ a, 
-                       const float* __restrict__ b, 
+inline void AlignedDot(const float* __restrict__ a,
+                       const float* __restrict__ b,
                        float* __restrict__ out) {
 
   /**
    * Multiply together two TILE x TILE matrices, and _add _the result to out (it is important to add
    * the result to the existing out, which you should not set to zero beforehand).  We are including
-   * the compiler flags here that enable the compile to properly use vector operators to implement 
-   * this function.  Specifically, the __restrict__ keyword indicates to the compile that a, b, and 
-   * out don't have any overlapping memory (which is necessary in order for vector operations to be 
-   * equivalent to their non-vectorized counterparts (imagine what could happen otherwise if a, b, 
-   * and out had overlapping memory).  Similarly the __builtin_assume_aligned keyword tells the 
-   * compiler that the input array siwll be aligned to the appropriate blocks in memory, which also 
+   * the compiler flags here that enable the compile to properly use vector operators to implement
+   * this function.  Specifically, the __restrict__ keyword indicates to the compile that a, b, and
+   * out don't have any overlapping memory (which is necessary in order for vector operations to be
+   * equivalent to their non-vectorized counterparts (imagine what could happen otherwise if a, b,
+   * and out had overlapping memory).  Similarly the __builtin_assume_aligned keyword tells the
+   * compiler that the input array will be aligned to the appropriate blocks in memory, which also
    * helps the compiler vectorize the code.
    *
    * Args:
@@ -193,8 +336,14 @@ inline void AlignedDot(const float* __restrict__ a,
   b = (const float*)__builtin_assume_aligned(b, TILE * ELEM_SIZE);
   out = (float*)__builtin_assume_aligned(out, TILE * ELEM_SIZE);
 
-  /// BEGIN YOUR SOLUTION 
-   
+  /// BEGIN YOUR SOLUTION
+  for (size_t i=0; i<TILE; i++) {
+    for (size_t j=0; j<TILE; j++) {
+      for (size_t k=0; k<TILE; k++) {
+        out[i * TILE + j] += a[i * TILE + k] * b[k * TILE + j];
+      }
+    }
+  }
   /// END YOUR SOLUTION
 }
 
@@ -206,36 +355,61 @@ void MatmulTiled(const AlignedArray& a, const AlignedArray& b, AlignedArray* out
    *   a[m/TILE][n/TILE][TILE][TILE]
    * You should do the multiplication tile-by-tile to improve performance of the array (i.e., this
    * function should call `AlignedDot()` implemented above).
-   * 
+   *
    * Note that this function will only be called when m, n, p are all multiples of TILE, so you can
    * assume that this division happens without any remainder.
-   * 
+   *
    * Args:
    *   a: compact 4D array of size m/TILE x n/TILE x TILE x TILE
    *   b: compact 4D array of size n/TILE x p/TILE x TILE x TILE
    *   out: compact 4D array of size m/TILE x p/TILE x TILE x TILE to write to
    *   m: rows of a / out
    *   n: columns of a / rows of b
-   *   p: coolumns of b / out
-   * 
+   *   p: columns of b / out
+   *
    */
   /// BEGIN YOUR SOLUTION
-  
+  float *tmp = new float[TILE * TILE];
+  float *A = new float[TILE * TILE];
+  float *B = new float[TILE * TILE];
+  Fill(out, 0);
+  for (size_t i=0; i<m/TILE; i++) {
+    for (size_t j=0; j<p/TILE; j++) {
+      for (size_t l=0; l<TILE*TILE; l++)
+        tmp[l] = 0;
+      for (size_t k=0; k<n/TILE; k++) {
+        for (size_t l=0; l<TILE*TILE; l++) {
+          size_t row = l / TILE, col = l % TILE;
+          A[l] = a.ptr[i * TILE * n + k * TILE * TILE + l];
+          B[l] = b.ptr[k * TILE * p + j * TILE * TILE + l];
+        }
+        AlignedDot(A, B, tmp);
+      }
+      for (size_t l=0; l<TILE*TILE; l++) {
+        out->ptr[i * p * TILE + j * TILE * TILE + l] = tmp[l];
+      }
+    }
+  }
   /// END YOUR SOLUTION
 }
 
 void ReduceMax(const AlignedArray& a, AlignedArray* out, size_t reduce_size) {
   /**
    * Reduce by taking maximum over `reduce_size` contiguous blocks.
-   * 
+   *
    * Args:
-   *   a: compact array of size a.size = out.size * reduce_size to reduce over
+   *   a: compact array of size a.size = out->size * reduce_size to reduce over
    *   out: compact array to write into
-   *   redice_size: size of the dimension to reduce over
+   *   reduce_size: size of the dimension to reduce over
    */
 
   /// BEGIN YOUR SOLUTION
-  
+  for (size_t i=0; i<out->size; i++) {
+    auto m = a.ptr[i * reduce_size];
+    for (size_t j=0; j<reduce_size; j++) 
+      m = std::max(m, a.ptr[i*reduce_size + j]);
+    out->ptr[i] = m;
+  }
   /// END YOUR SOLUTION
 }
 
@@ -250,7 +424,12 @@ void ReduceSum(const AlignedArray& a, AlignedArray* out, size_t reduce_size) {
    */
 
   /// BEGIN YOUR SOLUTION
-  
+  for (size_t i=0; i<out->size; i++) {
+    scalar_t m = 0;
+    for (size_t j=0; j<reduce_size; j++) 
+      m += a.ptr[i * reduce_size + j];
+    out->ptr[i] = m;
+  }  
   /// END YOUR SOLUTION
 }
 
