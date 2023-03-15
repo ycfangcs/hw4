@@ -587,7 +587,23 @@ class NDArray:
         Note: compact() before returning.
         """
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        if axes is None:
+            axes = range(len(self.strides))
+        offset_sum = 0
+        new_strides = list(self.strides)
+        for axis in axes:
+            # NOTE -1!!!
+            offset_sum += (self.shape[axis] - 1) * self.strides[axis]
+            new_strides[axis] = -self.strides[axis]
+        
+        ret = NDArray.make(
+            shape=self.shape, 
+            strides=tuple(new_strides), #调整了strides
+            device=self.device, 
+            handle=self._handle, # 保持底层数组不变
+            offset=offset_sum # 调整了offset offset是内存数组起始地址的偏移量
+        )
+        return ret.compact()
         ### END YOUR SOLUTION
 
 
@@ -598,7 +614,15 @@ class NDArray:
         axes = ( (0, 0), (1, 1), (0, 0)) pads the middle axis with a 0 on the left and right side.
         """
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        new_shape = list(self.shape)
+        for i, ax in enumerate(axes):
+            new_shape[i] += ax[0] + ax[1]
+        # NOTE not self.make!!!
+        ret = NDArray.make(tuple(new_shape), device=self.device)
+        ret.fill(0)
+        slices = [slice(ax[0], ax[0]+self.shape[i]) for i, ax in enumerate(axes)]
+        ret[tuple(slices)] = self
+        return ret
         ### END YOUR SOLUTION
 
 
