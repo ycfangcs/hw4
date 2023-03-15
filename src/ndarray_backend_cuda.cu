@@ -14,6 +14,7 @@ namespace cuda {
 #define TILE 4
 typedef float scalar_t;
 const size_t ELEM_SIZE = sizeof(scalar_t);
+typedef ssize_t ptrdiff_t;
 
 struct CudaArray {
   CudaArray(const size_t size) {
@@ -46,10 +47,10 @@ CudaDims CudaOneDim(size_t size) {
 #define MAX_VEC_SIZE 8
 struct CudaVec {
   uint32_t size;
-  uint32_t data[MAX_VEC_SIZE];
+  int32_t data[MAX_VEC_SIZE];
 };
 
-CudaVec VecToCuda(const std::vector<uint32_t>& x) {
+CudaVec VecToCuda(const std::vector<int32_t>& x) {
   CudaVec shape;
   if (x.size() > MAX_VEC_SIZE) throw std::runtime_error("Exceeded CUDA supported max dimesions");
   shape.size = x.size();
@@ -96,7 +97,7 @@ __global__ void CompactKernel(const scalar_t* a, scalar_t* out, size_t size, Cud
    *   strides: vector of strides of out array
    *   offset: offset of out array
    */
-  size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
+  ssize_t gid = blockIdx.x * blockDim.x + threadIdx.x;
 
   /// BEGIN YOUR SOLUTION
   if (gid < size) {
@@ -112,8 +113,8 @@ __global__ void CompactKernel(const scalar_t* a, scalar_t* out, size_t size, Cud
   /// END YOUR SOLUTION
 }
 
-void Compact(const CudaArray& a, CudaArray* out, std::vector<uint32_t> shape,
-             std::vector<uint32_t> strides, size_t offset) {
+void Compact(const CudaArray& a, CudaArray* out, std::vector<int32_t> shape,
+             std::vector<int32_t> strides, size_t offset) {
   /**
    * Compact an array in memory.  Unlike the C++ version, in CUDA this will primarily call the 
    * relevant CUDA kernel.  In this case, we illustrate how you should set this up (i.e., we give 
@@ -166,9 +167,8 @@ size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
 /// END YOUR SOLUTION
 }
 
-
-void EwiseSetitem(const CudaArray& a, CudaArray* out, std::vector<uint32_t> shape,
-                  std::vector<uint32_t> strides, size_t offset) {
+void EwiseSetitem(const CudaArray& a, CudaArray* out, std::vector<int32_t> shape,
+                  std::vector<int32_t> strides, size_t offset) {
   /**
    * Set items in a (non-compact) array using CUDA.  Yyou will most likely want to implement a
    * EwiseSetitemKernel() function, similar to those above, that will do the actual work.
@@ -220,9 +220,8 @@ size_t gid = blockIdx.x * blockDim.x + threadIdx.x;
 /// END YOUR SOLUTION
 }
 
-
-void ScalarSetitem(size_t size, scalar_t val, CudaArray* out, std::vector<uint32_t> shape,
-                   std::vector<uint32_t> strides, size_t offset) {
+void ScalarSetitem(size_t size, scalar_t val, CudaArray* out, std::vector<int32_t> shape,
+                   std::vector<int32_t> strides, size_t offset) {
   /**
    * Set items is a (non-compact) array
    * 
@@ -451,7 +450,6 @@ void EwiseTanh(const CudaArray& a, CudaArray* out) {
 ////////////////////////////////////////////////////////////////////////////////
 // Elementwise and scalar operations
 ////////////////////////////////////////////////////////////////////////////////
-
 
 __global__ void MatmulKernel(scalar_t *a, scalar_t *b, scalar_t *out, size_t size, uint32_t M, 
                               uint32_t N, uint32_t P) {
