@@ -46,8 +46,8 @@ void Fill(AlignedArray* out, scalar_t val) {
 
 
 
-void Compact(const AlignedArray& a, AlignedArray* out, std::vector<uint32_t> shape,
-             std::vector<uint32_t> strides, size_t offset) {
+void Compact(const AlignedArray& a, AlignedArray* out, std::vector<int32_t> shape,
+             std::vector<int32_t> strides, size_t offset) {
   /**
    * Compact an array in memory
    *
@@ -64,15 +64,16 @@ void Compact(const AlignedArray& a, AlignedArray* out, std::vector<uint32_t> sha
    */
   /// BEGIN YOUR SOLUTION
   size_t dim = shape.size();
-  std::vector<uint32_t> pos(dim, 0);
-  for (size_t i=0; i<out->size; i++) {
-    uint32_t idx = 0;
-    for (int j=0; j<dim; j++) 
+  // NOTE uint32_t has changed to int32_t
+  std::vector<int32_t> pos(dim, 0); 
+  for (int32_t i=0; i<out->size; i++) {
+    int32_t idx = 0;
+    for (int32_t j=0; j<dim; j++) 
       idx += strides[dim-1-j] * pos[j];
     out->ptr[i] = a.ptr[idx + offset];
     pos[0] += 1;
     // carry
-    for (int j=0; j<dim; j++) {
+    for (int32_t j=0; j<dim; j++) {
       if (pos[j] == shape[dim-1-j]) {
         pos[j] = 0;
         if (j != dim-1)
@@ -83,11 +84,11 @@ void Compact(const AlignedArray& a, AlignedArray* out, std::vector<uint32_t> sha
   /// END YOUR SOLUTION
 }
 
-void EwiseSetitem(const AlignedArray& a, AlignedArray* out, std::vector<uint32_t> shape,
-                  std::vector<uint32_t> strides, size_t offset) {
+void EwiseSetitem(const AlignedArray& a, AlignedArray* out, std::vector<int32_t> shape,
+                  std::vector<int32_t> strides, size_t offset) {
   /**
    * Set items in a (non-compact) array
-   *
+   * 
    * Args:
    *   a: _compact_ array whose items will be written to out
    *   out: non-compact array whose items are to be written
@@ -96,11 +97,12 @@ void EwiseSetitem(const AlignedArray& a, AlignedArray* out, std::vector<uint32_t
    *   offset: offset of the *out* array (not a, which has zero offset, being compact)
    */
   /// BEGIN YOUR SOLUTION
-  size_t dim = shape.size();
-  std::vector<uint32_t> pos(dim, 0);
+  int32_t dim = shape.size();
+  // NOTE uint32_t has changed to int32_t
+  std::vector<int32_t> pos(dim, 0);
   // NOTE careful with the iteration times, not `out-size`!
   for (size_t i=0; i<a.size; i++) {
-    uint32_t idx = 0;
+    int32_t idx = 0;
     for (int j=0; j<dim; j++) 
       idx += strides[dim-1-j] * pos[j];
     out->ptr[idx + offset] = a.ptr[i];
@@ -117,8 +119,8 @@ void EwiseSetitem(const AlignedArray& a, AlignedArray* out, std::vector<uint32_t
   /// END YOUR SOLUTION
 }
 
-void ScalarSetitem(const size_t size, scalar_t val, AlignedArray* out, std::vector<uint32_t> shape,
-                   std::vector<uint32_t> strides, size_t offset) {
+void ScalarSetitem(const size_t size, scalar_t val, AlignedArray* out, std::vector<int32_t> shape,
+                   std::vector<int32_t> strides, size_t offset) {
   /**
    * Set items is a (non-compact) array
    *
@@ -134,10 +136,10 @@ void ScalarSetitem(const size_t size, scalar_t val, AlignedArray* out, std::vect
    */
 
   /// BEGIN YOUR SOLUTION
-  size_t dim = shape.size();
-  std::vector<uint32_t> pos(dim, 0);
-  for (size_t i=0; i<size; i++) {
-    uint32_t idx = 0;
+  int32_t dim = shape.size();
+  std::vector<int32_t> pos(dim, 0);
+  for (int32_t i=0; i<size; i++) {
+    int32_t idx = 0;
     for (int j=0; j<dim; j++) 
       idx += strides[dim-1-j] * pos[j];
     out->ptr[idx + offset] = val;
@@ -311,8 +313,8 @@ void Matmul(const AlignedArray& a, const AlignedArray& b, AlignedArray* out, uin
   /// END YOUR SOLUTION
 }
 
-inline void AlignedDot(const float* __restrict__ a,
-                       const float* __restrict__ b,
+inline void AlignedDot(const float* __restrict__ a, 
+                       const float* __restrict__ b, 
                        float* __restrict__ out) {
 
   /**
