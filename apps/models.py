@@ -68,7 +68,18 @@ class LanguageModel(nn.Module):
         """
         super(LanguageModel, self).__init__()
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.embedding_size = embedding_size
+        self.output_size = output_size
+        self.hidden_size = hidden_size
+
+        self.embedding = nn.Embedding(output_size, embedding_size, device, dtype)
+        if seq_model == 'rnn':
+            self.model = nn.RNN(embedding_size, hidden_size, num_layers, device=device, dtype=dtype)
+        elif seq_model == 'lstm':
+            self.model = nn.LSTM(embedding_size, hidden_size, num_layers, device=device, dtype=dtype)
+        else:
+            raise NotImplementedError()
+        self.linear = nn.Linear(hidden_size, output_size, device=device, dtype=dtype)
         ### END YOUR SOLUTION
 
     def forward(self, x, h=None):
@@ -85,7 +96,11 @@ class LanguageModel(nn.Module):
             else h is tuple of (h0, c0), each of shape (num_layers, bs, hidden_size)
         """
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        seq_len, bs = x.shape
+        x = self.embedding(x)   # (seq_len, bs, embedding_size)
+        x, h_ = self.model(x, h) # (seq_len, bs, hidden_size)    
+        x = self.linear(x.reshape((seq_len*bs, self.hidden_size)))  
+        return x, h_
         ### END YOUR SOLUTION
 
 
