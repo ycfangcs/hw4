@@ -104,6 +104,8 @@ class DataLoader:
     def __init__(
         self,
         dataset: Dataset,
+        device,
+        dtype,
         batch_size: Optional[int] = 1,
         shuffle: bool = False,
     ):
@@ -111,33 +113,42 @@ class DataLoader:
         self.dataset = dataset
         self.shuffle = shuffle
         self.batch_size = batch_size
-        if not self.shuffle:
-            self.ordering = np.array_split(
-                np.arange(len(dataset)), range(
-                    batch_size, len(dataset), batch_size)
-            )
+        self.device = device
+        self.dtype = dtype
+        # if not self.shuffle:
+        #     self.ordering = np.array_split(
+        #         np.arange(len(dataset)), range(batch_size, len(dataset), batch_size)
+        #     )
 
+        # else:
+            # indices = np.arange(len(dataset))
+            # np.random.shuffle(indices)
+        #     self.ordering = np.array_split(indices, 
+        #                                    range(batch_size, len(dataset), batch_size))
+        self.ordering = np.array_split(
+                np.arange(len(dataset)), range(batch_size, len(dataset), batch_size)
+            )
     def __iter__(self):
         ### BEGIN YOUR SOLUTION
+        self.start = 0
+
+        # NOTE shuffle before each iter
         if self.shuffle:
-            ordering = np.arange(len(self.dataset))
-            np.random.shuffle(ordering)
-            batch_range = range(self.batch_size, len(
-                self.dataset), self.batch_size)
-            self.ordering = np.array_split(ordering, batch_range)
-        self.batch_idx = 0
+            indices = np.arange(len(self.dataset))
+            np.random.shuffle(indices)
+            self.ordering = np.array_split(indices, 
+                                 range(self.batch_size, len(self.dataset), self.batch_size))
         ### END YOUR SOLUTION
         return self
 
     def __next__(self):
         ### BEGIN YOUR SOLUTION
-        if self.batch_idx < len(self.ordering):
-            idx = self.ordering[self.batch_idx]
-            self.batch_idx += 1
-            batch_data = tuple([Tensor(x) for x in self.dataset[idx]])
-            return batch_data
-        else:
+        if self.start == len(self.ordering):
             raise StopIteration
+        a = self.start
+        self.start += 1
+        samples = [Tensor(x, device=self.device, dtype=self.dtype) for x in self.dataset[self.ordering[a]]]
+        return tuple(samples)
         ### END YOUR SOLUTION
 
     def __len__(self):
